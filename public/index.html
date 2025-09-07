@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="de">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Digital Twin – Reminder</title>
+  <body style="font-family:system-ui,-apple-system,Segoe UI,Roboto;max-width:780px;margin:40px auto;padding:0 12px">
+    <h1>Digital Twin – Reminder</h1>
+
+    <form id="f" style="display:grid;gap:8px;margin:16px 0">
+      <input id="title" placeholder="Titel" required>
+      <input id="tags" placeholder="Tags (comma)">
+      <textarea id="note" placeholder="Notiz" rows="4"></textarea>
+      <button>Speichern</button>
+    </form>
+
+    <details>
+      <summary>Filter</summary>
+      <button id="todayBtn" style="margin-top:8px">Nur heute</button>
+      <button id="yesterdayBtn" style="margin-top:8px">Nur gestern</button>
+      <button id="allBtn" style="margin-top:8px">Alle (50)</button>
+    </details>
+
+    <hr>
+    <ul id="list" style="list-style:none;padding:0"></ul>
+
+    <script>
+      const api = "/api/entries";
+
+      async function load(query="") {
+        const r = await fetch(api + query);
+        const a = await r.json();
+        list.innerHTML = a.map(e => `
+          <li style="padding:12px 0;border-bottom:1px solid #eee">
+            <b>${escapeHtml(e.title)}</b>
+            ${e.tags ? " — " + escapeHtml(e.tags) : ""}
+            <br><small>${e.created_at || ""}</small>
+            <p style="margin:6px 0">${escapeHtml(e.note || "")}</p>
+          </li>
+        `).join("");
+      }
+
+      function escapeHtml(s){
+        return (s||"").replace(/[&<>"']/g, m => (
+          {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]
+        ));
+      }
+
+      f.onsubmit = async (e) => {
+        e.preventDefault();
+        await fetch(api, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            title: title.value,
+            note: note.value,
+            tags: tags.value.split(",").map(s=>s.trim()).filter(Boolean)
+          })
+        });
+        title.value = note.value = tags.value = "";
+        load();
+      };
+
+      todayBtn.onclick = () => load("?today=true");
+      yesterdayBtn.onclick = () => load("?yesterday=true");
+      allBtn.onclick = () => load("");
+
+      load();
+    </script>
+  </body>
+</html>
